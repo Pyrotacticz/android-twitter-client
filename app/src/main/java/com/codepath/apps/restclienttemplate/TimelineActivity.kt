@@ -57,7 +57,8 @@ class TimelineActivity : AppCompatActivity() {
     }
 
     private fun loadNextDataFromApi(page: Int) {
-        val lastTweet = tweets[page].id.toLong()
+        Log.i("$TAG load", page.toString())
+        val lastTweet = tweets[tweets.size - 1].id.toLong()
         client.getNextTimeLine(lastTweet, object: JsonHttpResponseHandler() {
             override fun onFailure(
                 statusCode: Int,
@@ -74,6 +75,7 @@ class TimelineActivity : AppCompatActivity() {
                 val size = adapter.itemCount
                 try {
                     val listOfNewTweetsRetrieved = Tweet.fromJsonArray(json.jsonArray)
+                    Log.i("newTweets", json.jsonArray.toString())
                     tweets.addAll(listOfNewTweetsRetrieved)
                     adapter.notifyItemRangeInserted(size, listOfNewTweetsRetrieved.size - 1)
                     swipeContainer.isRefreshing = false
@@ -105,6 +107,7 @@ class TimelineActivity : AppCompatActivity() {
                     // clear out currently fetched tweets
                     adapter.clear()
                     val listOfNewTweetsRetrieved = Tweet.fromJsonArray(jsonArray)
+                    Log.i(TAG, json.jsonArray.toString())
                     tweets.addAll(listOfNewTweetsRetrieved)
                     adapter.notifyDataSetChanged()
                     swipeContainer.isRefreshing = false
