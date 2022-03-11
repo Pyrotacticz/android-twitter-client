@@ -1,23 +1,28 @@
 package com.codepath.apps.restclienttemplate
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.RecoverySystem
 import android.util.Log
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.Observer
+import androidx.paging.LivePagedListBuilder
+import androidx.paging.PagedList
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.codepath.apps.restclienttemplate.models.Tweet
+import com.codepath.apps.restclienttemplate.models.TweetDataSourceFactory
 import com.codepath.asynchttpclient.callback.JsonHttpResponseHandler
 import okhttp3.Headers
 import org.json.JSONException
+
 
 class TimelineActivity : AppCompatActivity() {
 
     lateinit var client: TwitterClient
     lateinit var rvTweets: RecyclerView
     lateinit var adapter: TweetsAdapter
-    val tweets = ArrayList<Tweet>()
+    var tweets: LiveData<PagedList<Tweet>>? = null
 
     lateinit var swipeContainer: SwipeRefreshLayout
 
@@ -42,6 +47,18 @@ class TimelineActivity : AppCompatActivity() {
 
         rvTweets = findViewById(R.id.rvTweets)
         adapter = TweetsAdapter(tweets)
+
+        val config: PagedList.Config = PagedList.Config.Builder().setPageSize(20).build()
+        val factory: TweetDataSourceFactory = TweetDataSourceFactory(TwitterApplication.getRestClient(this))
+        tweets = LivePagedListBuilder(factory, config).build()
+        tweets.observe(this, object : Observer<PagedList<Tweet>> {
+            override fun onChanged(t: PagedList<Tweet>?) {
+                adapter.submitList(tweets)
+            }
+
+        })
+
+
 
         rvTweets.layoutManager = LinearLayoutManager(this)
         rvTweets.adapter = adapter
@@ -69,7 +86,7 @@ class TimelineActivity : AppCompatActivity() {
                     // clear out currently fetched tweets
                     adapter.clear()
                     val listOfNewTweetsRetrieved = Tweet.fromJsonArray(jsonArray)
-                    tweets.addAll(listOfNewTweetsRetrieved)
+                    tweets?.addAll(listOfNewTweetsRetrieved)
                     adapter.notifyDataSetChanged()
                     swipeContainer.isRefreshing = false
                 } catch (e: JSONException) {
