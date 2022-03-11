@@ -2,7 +2,6 @@ package com.codepath.apps.restclienttemplate
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.RecoverySystem
 import android.util.Log
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -42,11 +41,48 @@ class TimelineActivity : AppCompatActivity() {
 
         rvTweets = findViewById(R.id.rvTweets)
         adapter = TweetsAdapter(tweets)
-
-        rvTweets.layoutManager = LinearLayoutManager(this)
+        val linearLayoutManager = LinearLayoutManager(this)
+        rvTweets.layoutManager = linearLayoutManager
         rvTweets.adapter = adapter
 
+        val scrollListener = object: EndlessRecyclerViewScrollListener(linearLayoutManager) {
+            override fun onLoadMore(page: Int, totalItemsCount: Int, view: RecyclerView?) {
+                loadNextDataFromApi(page)
+            }
+        }
+
+        rvTweets.addOnScrollListener(scrollListener)
+
         populateHomeTimeline()
+    }
+
+    private fun loadNextDataFromApi(page: Int) {
+        val lastTweet = tweets[page].id.toLong()
+        client.getNextTimeLine(lastTweet, object: JsonHttpResponseHandler() {
+            override fun onFailure(
+                statusCode: Int,
+                headers: Headers?,
+                response: String?,
+                throwable: Throwable?
+            ) {
+                Log.i("$TAG load", "onFailure $statusCode")
+            }
+
+            override fun onSuccess(statusCode: Int, headers: Headers, json: JSON) {
+                Log.i("$TAG load", "onSuccess!")
+
+                val size = adapter.itemCount
+                try {
+                    val listOfNewTweetsRetrieved = Tweet.fromJsonArray(json.jsonArray)
+                    tweets.addAll(listOfNewTweetsRetrieved)
+                    adapter.notifyItemRangeInserted(size, listOfNewTweetsRetrieved.size - 1)
+                    swipeContainer.isRefreshing = false
+                } catch (e: JSONException) {
+                    Log.e(TAG, "JSON Exception $e")
+                }
+            }
+
+        })
     }
 
     fun populateHomeTimeline() {
