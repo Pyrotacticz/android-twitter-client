@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.codepath.apps.restclienttemplate.models.Tweet
 import com.codepath.asynchttpclient.callback.JsonHttpResponseHandler
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import okhttp3.Headers
 import org.json.JSONException
 
@@ -20,6 +21,7 @@ class TimelineActivity : AppCompatActivity() {
     lateinit var client: TwitterClient
     lateinit var rvTweets: RecyclerView
     lateinit var adapter: TweetsAdapter
+    lateinit var fbtnCompose: FloatingActionButton
     val tweets = ArrayList<Tweet>()
 
     lateinit var swipeContainer: SwipeRefreshLayout
@@ -57,6 +59,11 @@ class TimelineActivity : AppCompatActivity() {
 
         rvTweets.addOnScrollListener(scrollListener)
 
+        fbtnCompose = findViewById(R.id.fbtnCompose)
+        fbtnCompose.setOnClickListener {
+            onComposeClick()
+        }
+
         populateHomeTimeline()
     }
 
@@ -82,6 +89,11 @@ class TimelineActivity : AppCompatActivity() {
             rvTweets.smoothScrollToPosition(0)
         }
         super.onActivityResult(requestCode, resultCode, data)
+    }
+
+    private fun onComposeClick() {
+        val intent = Intent(this, ComposeActivity::class.java)
+        startActivityForResult(intent, REQUEST_CODE)
     }
 
     private fun loadNextDataFromApi(page: Int) {
@@ -115,7 +127,7 @@ class TimelineActivity : AppCompatActivity() {
         })
     }
 
-    fun populateHomeTimeline() {
+    private fun populateHomeTimeline() {
         client.getTimeLine(object: JsonHttpResponseHandler() {
             override fun onFailure(
                 statusCode: Int,
