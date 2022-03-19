@@ -1,20 +1,24 @@
 package com.codepath.apps.restclienttemplate
 
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
+import android.os.AsyncTask
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.codepath.apps.restclienttemplate.models.Tweet
+import com.codepath.apps.restclienttemplate.models.TweetDao
+import com.codepath.apps.restclienttemplate.models.TweetWithUser
+import com.codepath.apps.restclienttemplate.models.User
 import com.codepath.asynchttpclient.callback.JsonHttpResponseHandler
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import okhttp3.Headers
 import org.json.JSONException
+
 
 class TimelineActivity : AppCompatActivity() {
 
@@ -22,6 +26,7 @@ class TimelineActivity : AppCompatActivity() {
     lateinit var rvTweets: RecyclerView
     lateinit var adapter: TweetsAdapter
     lateinit var fbtnCompose: FloatingActionButton
+    lateinit var tweetDao: TweetDao
     val tweets = ArrayList<Tweet>()
 
     lateinit var swipeContainer: SwipeRefreshLayout
@@ -30,7 +35,20 @@ class TimelineActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_timeline)
 
-        client = TwitterApplication.getRestClient(this)
+        client = TwitterApp.getRestClient(this)
+        tweetDao = (applicationContext as TwitterApp).twitterDatabase.tweetDao()
+
+        AsyncTask.execute { // Request list of Tweets with Users using DAO
+            val tweetsFromDatabase: List<TweetWithUser> =
+                tweetDao.recentItems()
+            adapter.clear()
+            Log.i(TAG, "Showing data from database")
+
+            // TweetWithUser has to be converted Tweet objects with nested User objects (see next snippet)
+            val tweetList: List<Tweet> =
+                TweetWithUser.getTweetList(tweetsFromDatabase)
+            adapter.addAll(tweetList)
+        }
 
         swipeContainer = findViewById(R.id.swipeContainer)
         swipeContainer.setOnRefreshListener {
@@ -150,6 +168,16 @@ class TimelineActivity : AppCompatActivity() {
                     Log.i(TAG, json.jsonArray.toString())
                     tweets.addAll(listOfNewTweetsRetrieved)
                     adapter.notifyDataSetChanged()
+
+                    // Interact with database
+                    AsyncTask.execute {
+                        (applicationContext as TwitterApp).getTweetDatabase()
+                            ?.runInTransaction {
+                                tweetDao.insertModel(*User.fromJsonArray(jsonArray).toTypedArray())
+                                tweetDao.insertModel(*listOfNewTweetsRetrieved.toTypedArray())
+                            }
+                    }
+
                     swipeContainer.isRefreshing = false
                 } catch (e: JSONException) {
                     Log.e(TAG, "JSON Exception $e")

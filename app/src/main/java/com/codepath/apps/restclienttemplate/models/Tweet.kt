@@ -4,6 +4,7 @@ import android.os.Parcelable
 import org.json.JSONArray
 import org.json.JSONObject
 import android.text.format.DateUtils
+import androidx.room.*
 import kotlinx.parcelize.Parcelize
 import java.text.ParseException
 import java.text.SimpleDateFormat
@@ -11,8 +12,14 @@ import java.util.*
 import kotlin.collections.ArrayList
 
 @Parcelize
-class Tweet(var id: String = "", var body: String = "", var createdAt: String = "", var user: User? = null) :
-    Parcelable {
+@Entity(foreignKeys = [ForeignKey(entity = User::class, parentColumns = ["id"], childColumns = ["userId"])])
+class Tweet(
+    @ColumnInfo @PrimaryKey var id: String = "",
+    @ColumnInfo var body: String = "",
+    @ColumnInfo var createdAt: String = "",
+    @ColumnInfo var userId: String? = null,
+    @Ignore var user: User? = null
+) : Parcelable {
 
     companion object {
         fun fromJson(jsonObject: JSONObject) : Tweet {
@@ -20,7 +27,9 @@ class Tweet(var id: String = "", var body: String = "", var createdAt: String = 
             tweet.id = jsonObject.getString("id")
             tweet.body = jsonObject.getString("text")
             tweet.createdAt = getRelativeTimeAgo(jsonObject.getString("created_at"))
-            tweet.user = User.fromJson(jsonObject.getJSONObject("user"))
+            val user: User = User.fromJson(jsonObject.getJSONObject("user"))
+            tweet.userId = user.id
+            tweet.user = user
             return tweet
         }
 

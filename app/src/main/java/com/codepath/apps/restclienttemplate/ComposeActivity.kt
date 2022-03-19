@@ -29,7 +29,7 @@ class ComposeActivity : AppCompatActivity() {
         etTweetCompose = findViewById(R.id.etTweetCompose)
         btnTweet = findViewById(R.id.btnTweet)
 
-        client = TwitterApplication.getRestClient(this)
+        client = TwitterApp.getRestClient(this)
 
         etTweetWrapper.counterMaxLength = MAX_CHARACTER_COUNT
         etTweetCompose.addTextChangedListener(object: TextWatcher {
